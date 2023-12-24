@@ -30,10 +30,11 @@ class Player:
         self.current_sprite = 0
 
     def explode(self):
+        self.angle = 0
         self.sprites = []
         for i in range(1, 10):
-            self.image = pygame.image.load(f'Graphics/Explosion/frame_{i}.png')
-            self.sprites.append(self.image)
+            self.exp_image = pygame.image.load(f'Graphics/Explosion/frame_{i}.png')
+            self.sprites.append(self.exp_image)
         self.current_sprite += 0.2
         if self.current_sprite < 9:
             self.img = self.sprites[int(self.current_sprite)]
@@ -54,10 +55,10 @@ class Player:
         self.rotated_rect = self.rotated_surf.get_rect(center=(self.x, self.y))
         self.cosine = math.cos(math.radians(self.angle + 90))
         self.sine = math.sin(math.radians(self.angle + 90))
-        self.angle_velocity *= 0.98
+        self.angle_velocity *= 0.96
 
     def apply_thrust(self):
-        self.thrust_force = 0.01
+        self.thrust_force = 0.005
         self.velocity_x += self.cosine * self.thrust_force
         self.velocity_y -= self.sine * self.thrust_force
 
@@ -82,7 +83,7 @@ class Player:
     def update(self):
         self.update_rotation()
         if self.health > 0:
-            self.apply_vector()
+            # self.apply_vector()
             self.update_location()
 
 
@@ -161,6 +162,7 @@ def draw_bullet(name, player):
 
 
 def bullet_collisions():
+    # Checks for bullet to bullet collisions
     for i in player1_bullet.bullet_list:
         for j in player2_bullet.bullet_list:
             if i != j:
@@ -175,18 +177,17 @@ def restart_game():
     player1.x = 633
     player1.y = 500
     player1.health = 1
-    player1.velocity_x = 0
-    player1.velocity_y = 0
-    player1.current_sprite = 0
+
+    # Shared settings to reset
+    player1.velocity_x, player2.velocity_x = 0, 0
+    player1.velocity_y, player2.velocity_y = 0, 0
+    player1.current_sprite, player2.current_sprite = 0, 0
 
     # Player 2 reset settings
     player2.angle = 90
     player2.x = 1266
     player2.y = 500
     player2.health = 1
-    player2.velocity_x = 0
-    player2.velocity_y = 0
-    player2.current_sprite = 0
 
     # Clear all bullets
     player1_bullet.bullet_list.clear()
@@ -278,9 +279,9 @@ while running:
         player2.update()
         screen.fill('black')
 
-        # Center circle
-        pygame.draw.circle(screen, (255, 255, 255), (WIDTH // 2, HEIGHT // 2), 8)
-        pygame.draw.circle(screen, (0, 0, 0), (WIDTH // 2, HEIGHT // 2), 7)
+        # Center gravity point
+        # pygame.draw.circle(screen, (255, 255, 255), (WIDTH // 2, HEIGHT // 2), 8)
+        # pygame.draw.circle(screen, (0, 0, 0), (WIDTH // 2, HEIGHT // 2), 7)
 
         # Stop drawing when explosion animation ends
         if player1.current_sprite < 9:
@@ -288,10 +289,10 @@ while running:
         if player2.current_sprite < 9:
             player2.draw()
 
+        fps = clock.get_fps()
         draw_bullet(player1_bullet, player2)
         draw_bullet(player2_bullet, player1)
         draw_bullet(bullet_mouse, player1)
-        fps = clock.get_fps()
         display_text('FPS', fps, 10)
         display_text('velocity', player1.angle_velocity, 40)
         display_text('bullets', len(player1_bullet.bullet_list + bullet_mouse.bullet_list), 70)
@@ -302,5 +303,9 @@ while running:
         bullet_collisions()
         mouse_bullet_spawn()
         pygame.display.update()
+
+    else:
+        screen.fill('black')
+
     clock.tick(60)
 pygame.quit()
