@@ -33,11 +33,13 @@ class Player:
         self.angle = 0
         self.sprites = []
         for i in range(1, 10):
-            self.exp_image = pygame.image.load(f'Graphics/Explosion/frame_{i}.png')
-            self.sprites.append(self.exp_image)
+            self.explosion_image = pygame.image.load(f'Graphics/Explosion/frame_{i}.png')
+            self.sprites.append(self.explosion_image)
         self.current_sprite += 0.2
         if self.current_sprite < 9:
             self.img = self.sprites[int(self.current_sprite)]
+        else:
+            self.x = 5000  # Teleports empty sprite outside of the screen border
 
     def draw(self):
         screen.blit(self.rotated_surf, self.rotated_rect)
@@ -87,6 +89,7 @@ class Player:
             self.update_location()
 
 
+
 class Bullet:
     def __init__(self, x, y, angle, velocity, player=False):
         self.x = x
@@ -113,9 +116,10 @@ class Bullet:
     def update(self):
         self.x += self.velocity_x
         self.y += self.velocity_y
-        self.apply_vector()
+        # self.apply_vector()
 
     def apply_vector(self):
+        # Calculates bullet gravity towards centre
         self.gravity_direction = self.gravity_point - pygame.math.Vector2(self.x, self.y)
         self.gravity_direction.normalize_ip()
         self.velocity_x += self.gravity_direction.x * self.gravitational_force
@@ -152,13 +156,14 @@ def draw_bullet(name, player):
         i.update()
         if i.x < 0 or i.x > WIDTH or i.y < 0 or i.y > HEIGHT:
             name.bullet_list.remove(i)
-        if i.check_ship_collision(player.rotated_rect):
-            name.bullet_list.remove(i)
-            player.health -= 1
-            if player.health <= 0:
-                pygame.time.set_timer(event_1, 3000, 1)
-                pygame.mixer.Channel(3).play(player1.sound_explode)
-                player.explode()
+        if player.health >= 1:
+            if i.check_ship_collision(player.rotated_rect):
+                name.bullet_list.remove(i)
+                player.health -= 1
+                if player.health <= 0:
+                    pygame.time.set_timer(event_1, 3000, 1)
+                    pygame.mixer.Channel(3).play(player1.sound_explode)
+                    player.explode()
 
 
 def bullet_collisions():
@@ -227,13 +232,17 @@ while running:
             if event.key == pygame.K_DOWN:
                 if start_ticks - player1_last_bullet_time > bullet_cooldown:
                     if player1.health > 0:
-                        player1_bullet.bullet_list.append(Bullet(player1.x, player1.y, player1.angle, True, player1))
+                        player1_bullet.bullet_list.append(Bullet(
+                            player1.x, player1.y, player1.angle, True, player1
+                        ))
                         pygame.mixer.Channel(2).play(player1_bullet.sound)
                         player1_last_bullet_time = start_ticks
             if event.key == pygame.K_s:
                 if start_ticks - player2_last_bullet_time > bullet_cooldown:
                     if player2.health > 0:
-                        player2_bullet.bullet_list.append(Bullet(player2.x, player2.y, player2.angle, True, player2))
+                        player2_bullet.bullet_list.append(Bullet(
+                            player2.x, player2.y, player2.angle, True, player2
+                        ))
                         pygame.mixer.Channel(2).play(player2_bullet.sound)
                         player2_last_bullet_time = start_ticks
         if event.type == pygame.KEYUP:
@@ -248,29 +257,35 @@ while running:
     if game_active:
         start_ticks = pygame.time.get_ticks()
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT]:
-            player1.turn_left()
-        if keys[pygame.K_RIGHT]:
-            player1.turn_right()
-        if keys[pygame.K_UP]:
-            if player1.health > 0:
-                player1.apply_thrust()
-                player1.sound_boost_loop.play(1)
-                player1.img = player1.img_thrust
-        elif player1.health <= 0:
+
+        # Player 1 controls
+        if player1.health >= 1:
+            if keys[pygame.K_LEFT]:
+                player1.turn_left()
+            if keys[pygame.K_RIGHT]:
+                player1.turn_right()
+            if keys[pygame.K_UP]:
+                if player1.health > 0:
+                    player1.apply_thrust()
+                    player1.sound_boost_loop.play(1)
+                    player1.img = player1.img_thrust
+        if player1.health <= 0:
             player1.explode()
         else:
             player1.img = pygame.image.load(f'Graphics/Player_1.png').convert_alpha()
-        if keys[pygame.K_a]:
-            player2.turn_left()
-        if keys[pygame.K_d]:
-            player2.turn_right()
-        if keys[pygame.K_w]:
-            if player2.health > 0:
-                player2.apply_thrust()
-                player2.sound_boost_loop.play(1)
-                player2.img = player2.img_thrust
-        elif player2.health <= 0:
+
+        # Player 2 controls
+        if player2.health >= 1:
+            if keys[pygame.K_a]:
+                player2.turn_left()
+            if keys[pygame.K_d]:
+                player2.turn_right()
+            if keys[pygame.K_w]:
+                if player2.health > 0:
+                    player2.apply_thrust()
+                    player2.sound_boost_loop.play(1)
+                    player2.img = player2.img_thrust
+        if player2.health <= 0:
             player2.explode()
         else:
             player2.img = pygame.image.load(f'Graphics/Player_2.png').convert_alpha()
@@ -279,7 +294,7 @@ while running:
         player2.update()
         screen.fill('black')
 
-        # Center gravity point
+        # Displaying centre gravity point
         # pygame.draw.circle(screen, (255, 255, 255), (WIDTH // 2, HEIGHT // 2), 8)
         # pygame.draw.circle(screen, (0, 0, 0), (WIDTH // 2, HEIGHT // 2), 7)
 
@@ -293,6 +308,7 @@ while running:
         draw_bullet(player1_bullet, player2)
         draw_bullet(player2_bullet, player1)
         draw_bullet(bullet_mouse, player1)
+
         display_text('FPS', fps, 10)
         display_text('velocity', player1.angle_velocity, 40)
         display_text('bullets', len(player1_bullet.bullet_list + bullet_mouse.bullet_list), 70)
@@ -300,6 +316,7 @@ while running:
         display_text('p1_health', player1.health, 130)
         display_text('p2_health', player2.health, 160)
         display_text('time', player1_last_bullet_time, 190)
+
         bullet_collisions()
         mouse_bullet_spawn()
         pygame.display.update()
