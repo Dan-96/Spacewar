@@ -113,9 +113,10 @@ class Bullet:
     def update(self):
         self.x += self.velocity_x
         self.y += self.velocity_y
-        self.apply_vector()
+        # self.apply_vector()
 
     def apply_vector(self):
+        # Calculates bullet gravity towards the centre
         self.gravity_direction = self.gravity_point - pygame.math.Vector2(self.x, self.y)
         self.gravity_direction.normalize_ip()
         self.velocity_x += self.gravity_direction.x * self.gravitational_force
@@ -152,13 +153,14 @@ def draw_bullet(name, player):
         i.update()
         if i.x < 0 or i.x > WIDTH or i.y < 0 or i.y > HEIGHT:
             name.bullet_list.remove(i)
-        if i.check_ship_collision(player.rotated_rect):
-            name.bullet_list.remove(i)
-            player.health -= 1
-            if player.health <= 0:
-                pygame.time.set_timer(event_1, 3000, 1)
-                pygame.mixer.Channel(3).play(player1.sound_explode)
-                player.explode()
+        if player.health >= 1:
+            if i.check_ship_collision(player.rotated_rect):
+                name.bullet_list.remove(i)
+                player.health -= 1
+                if player.health <= 0:
+                    pygame.time.set_timer(event_1, 3000, 1)
+                    pygame.mixer.Channel(3).play(player1.sound_explode)
+                    player.explode()
 
 
 def bullet_collisions():
@@ -248,32 +250,34 @@ while running:
     if game_active:
         start_ticks = pygame.time.get_ticks()
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT]:
-            player1.turn_left()
-        if keys[pygame.K_RIGHT]:
-            player1.turn_right()
-        if keys[pygame.K_UP]:
-            if player1.health > 0:
+        if player1.health >= 1:
+            if keys[pygame.K_LEFT]:
+                player1.turn_left()
+            if keys[pygame.K_RIGHT]:
+                player1.turn_right()
+            if keys[pygame.K_UP]:
                 player1.apply_thrust()
                 player1.sound_boost_loop.play(1)
                 player1.img = player1.img_thrust
-        elif player1.health <= 0:
+            else:
+                player1.img = pygame.image.load(f'Graphics/Player_1.png').convert_alpha()
+        if player1.health <= 0:
             player1.explode()
-        else:
-            player1.img = pygame.image.load(f'Graphics/Player_1.png').convert_alpha()
-        if keys[pygame.K_a]:
-            player2.turn_left()
-        if keys[pygame.K_d]:
-            player2.turn_right()
-        if keys[pygame.K_w]:
-            if player2.health > 0:
+
+        if player2.health >= 1:
+            if keys[pygame.K_a]:
+                player2.turn_left()
+            if keys[pygame.K_d]:
+                player2.turn_right()
+            if keys[pygame.K_w]:
                 player2.apply_thrust()
                 player2.sound_boost_loop.play(1)
                 player2.img = player2.img_thrust
-        elif player2.health <= 0:
+            else:
+                player2.img = pygame.image.load(f'Graphics/Player_2.png').convert_alpha()
+        if player2.health <= 0:
             player2.explode()
-        else:
-            player2.img = pygame.image.load(f'Graphics/Player_2.png').convert_alpha()
+
 
         player1.update()
         player2.update()
