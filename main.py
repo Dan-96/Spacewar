@@ -65,8 +65,8 @@ class Player:
     def apply_vector(self):
         self.gravity_direction = self.gravity_point - pygame.math.Vector2(self.x, self.y)
         self.gravity_direction.normalize_ip()
-        self.velocity_x += self.gravity_direction.x * self.gravitational_force * 0.1
-        self.velocity_y += self.gravity_direction.y * self.gravitational_force * 0.1
+        self.velocity_x += self.gravity_direction.x * self.gravitational_force * 0.2
+        self.velocity_y += self.gravity_direction.y * self.gravitational_force * 0.2
 
     def update_location(self):
         self.x += self.velocity_x
@@ -83,8 +83,9 @@ class Player:
     def update(self):
         self.update_rotation()
         if self.health > 0:
-            # self.apply_vector()
+            self.apply_vector()
             self.update_location()
+
 
 
 class Bullet:
@@ -113,7 +114,7 @@ class Bullet:
     def update(self):
         self.x += self.velocity_x
         self.y += self.velocity_y
-        # self.apply_vector()
+        self.apply_vector()
 
     def apply_vector(self):
         # Calculates bullet gravity towards the centre
@@ -134,17 +135,23 @@ class Bullet:
         return distance < (self.radius * hitbox_size) + (other_bullet.radius * hitbox_size)
 
 
-def display_text(name, variable, height):
-    font = pygame.font.Font(None, 36)
-    variable_text = font.render(f"{name}: {variable: .0f}", True, (255, 255, 255))
-    screen.blit(variable_text, (10, height))
+
+def debug_text(name, x, y, size, variable=False):
+    font = pygame.font.Font('Fonts/clacon2.ttf', size)
+    if variable:
+        text = font.render(f"{name} {variable: .1f}", False, (255, 255, 255))
+        screen.blit(text, (y, x))
+    else:
+        text = font.render(f'{name}', False, (255, 255, 255))
+        screen.blit(text, (y, x))
 
 
 def mouse_bullet_spawn():
-    mouse_x, mouse_y = pygame.mouse.get_pos()
-    mouse_buttons = pygame.mouse.get_pressed()
-    if mouse_buttons[0] == 1:
-        bullet_mouse.bullet_list.append(Bullet(mouse_x, mouse_y, 0, False, player1))
+    if debug:
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        mouse_buttons = pygame.mouse.get_pressed()
+        if mouse_buttons[0] == 1:
+            bullet_mouse.bullet_list.append(Bullet(mouse_x, (mouse_y + 17), 0, False, player1))
 
 
 def draw_bullet(name, player):
@@ -175,26 +182,61 @@ def bullet_collisions():
 
 def restart_game():
     # Player 1 reset settings
-    player1.angle = 270
-    player1.x = 633
+    player1.angle = 90
+    player1.x = 1266
     player1.y = 500
     player1.health = 1
-
     # Shared settings to reset
     player1.velocity_x, player2.velocity_x = 0, 0
     player1.velocity_y, player2.velocity_y = 0, 0
     player1.current_sprite, player2.current_sprite = 0, 0
-
     # Player 2 reset settings
-    player2.angle = 90
-    player2.x = 1266
+    player2.angle = 270
+    player2.x = 633
     player2.y = 500
     player2.health = 1
-
     # Clear all bullets
     player1_bullet.bullet_list.clear()
     player2_bullet.bullet_list.clear()
     bullet_mouse.bullet_list.clear()
+
+
+def display_text(text, x, y, colour='gray33', size=30):
+    font = pygame.font.Font('Fonts/clacon2.ttf', size)
+    menu_text = font.render(f'{text}', False, colour)
+    menu_text_rect = menu_text.get_rect()
+    menu_text_rect.center = (x, y)
+    screen.blit(menu_text, menu_text_rect)
+
+
+def menu_screen():
+    screen.fill('black')
+    logo = pygame.image.load('Graphics/logo.png').convert_alpha()
+    resized_logo = pygame.transform.scale(logo, (742, 116))
+    screen.blit(resized_logo, (579, 100))
+    display_text('alpha-v0.1.0', 1400, 210, 'grey', 20)
+    display_text('START', 950, 450)
+    display_text('OPTIONS', 950, 500)
+    display_text('EXIT', 950, 550)
+    if menu_selection == 0:
+        display_text('> START <', 950, 448, 'white')
+    elif menu_selection == 1:
+        display_text('> OPTIONS <', 950, 498, 'white')
+    elif menu_selection == 2:
+        display_text('> EXIT <', 950, 548, 'white')
+
+
+def options_screen():
+    screen.fill('black')
+    display_text('RESOLUTION (SOON)', 950, 450)
+    display_text('CONTROLS (SOON)', 950, 500)
+    display_text('SAVE & EXIT', 950, 550)
+    if options_selection == 0:
+        display_text('> RESOLUTION (SOON) <', 950, 448, 'white')
+    elif options_selection == 1:
+        display_text('> CONTROLS (SOON) <', 950, 498, 'white')
+    elif options_selection == 2:
+        display_text('> SAVE & EXIT <', 950, 548, 'white')
 
 
 pygame.init()
@@ -202,18 +244,25 @@ WIDTH = 1900
 HEIGHT = 1000
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Spacewar")
+icon = pygame.image.load('Graphics/Player_1_Thrust.png')
+pygame.display.set_icon(icon)
 mouse_x, mouse_y = pygame.mouse.get_pos()
-player1 = Player(633, 500, 270, 'Player_1')
-player2 = Player(1266, 500, 90, 'Player_2')
+player1 = Player(1266, 500, 90, 'Player_1')
+player2 = Player(633, 500, 270, 'Player_2')
 player1_bullet = Bullet(player1.x, player1.y, player1.angle, True, player1)
 player2_bullet = Bullet(player2.x, player2.y, player2.angle, True, player2)
 bullet_mouse = Bullet(mouse_x, mouse_y, 0, False)
 player1_last_bullet_time = 0
 player2_last_bullet_time = 0
-bullet_cooldown = 1000
+bullet_cooldown = 3000
 clock = pygame.time.Clock()
 pygame.mixer.set_num_channels(4)
-game_active = True
+menu_selection = 0
+options_selection = 0
+debug = False
+game_active = False
+main_menu = True
+options_menu = False
 running = True
 
 # Custom events
@@ -225,28 +274,73 @@ while running:
             running = False
         if event.type == event_1:
             restart_game()
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_DOWN:
-                if start_ticks - player1_last_bullet_time > bullet_cooldown:
+        if game_active:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_RCTRL:
+                    if start_ticks - player1_last_bullet_time > bullet_cooldown:
+                        if player1.health > 0:
+                            player1_bullet.bullet_list.append(Bullet(player1.x, player1.y, player1.angle, True, player1))
+                            pygame.mixer.Channel(2).play(player1_bullet.sound)
+                            player1_last_bullet_time = start_ticks
+                if event.key == pygame.K_SPACE:
+                    if start_ticks - player2_last_bullet_time > bullet_cooldown:
+                        if player2.health > 0:
+                            player2_bullet.bullet_list.append(Bullet(player2.x, player2.y, player2.angle, True, player2))
+                            pygame.mixer.Channel(2).play(player2_bullet.sound)
+                            player2_last_bullet_time = start_ticks
+                if event.key == pygame.K_ESCAPE:
+                    restart_game()
+                    game_active = False
+                    main_menu = True
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_UP:
                     if player1.health > 0:
-                        player1_bullet.bullet_list.append(Bullet(player1.x, player1.y, player1.angle, True, player1))
-                        pygame.mixer.Channel(2).play(player1_bullet.sound)
-                        player1_last_bullet_time = start_ticks
-            if event.key == pygame.K_s:
-                if start_ticks - player2_last_bullet_time > bullet_cooldown:
+                        player1.sound_boost_loop.stop()
+                        pygame.mixer.Channel(1).play(player1.sound_boost_end)
+                if event.key == pygame.K_w:
                     if player2.health > 0:
-                        player2_bullet.bullet_list.append(Bullet(player2.x, player2.y, player2.angle, True, player2))
-                        pygame.mixer.Channel(2).play(player2_bullet.sound)
-                        player2_last_bullet_time = start_ticks
-        if event.type == pygame.KEYUP:
-            if event.key == pygame.K_UP:
-                if player1.health > 0:
-                    player1.sound_boost_loop.stop()
-                    pygame.mixer.Channel(1).play(player1.sound_boost_end)
-            if event.key == pygame.K_w:
-                if player2.health > 0:
-                    player2.sound_boost_loop.stop()
-                    pygame.mixer.Channel(1).play(player2.sound_boost_end)
+                        player2.sound_boost_loop.stop()
+                        pygame.mixer.Channel(1).play(player2.sound_boost_end)
+        elif main_menu:
+            options_selection = 0
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    menu_selection -= 1
+                    if menu_selection <= 0:
+                        menu_selection = 0
+                if event.key == pygame.K_DOWN:
+                    menu_selection += 1
+                    if menu_selection >= 2:
+                        menu_selection = 2
+                if event.key == pygame.K_RETURN:
+                    if menu_selection == 0:
+                        main_menu = False
+                        game_active = True
+                    if menu_selection == 1:
+                        main_menu = False
+                        options_menu = True
+                    if menu_selection == 2:
+                        running = False
+        elif options_menu:
+            menu_selection = 0
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    options_selection -= 1
+                    if options_selection <= 0:
+                        options_selection = 0
+                if event.key == pygame.K_DOWN:
+                    options_selection += 1
+                    if options_selection >= 2:
+                        options_selection = 2
+                if event.key == pygame.K_RETURN:
+                    if options_selection == 2:
+                        options_menu = False
+                        main_menu = True
+                if event.key == pygame.K_ESCAPE:
+                    options_menu = False
+                    main_menu = True
+
+
     if game_active:
         start_ticks = pygame.time.get_ticks()
         keys = pygame.key.get_pressed()
@@ -262,8 +356,8 @@ while running:
             else:
                 player1.img = pygame.image.load(f'Graphics/Player_1.png').convert_alpha()
         if player1.health <= 0:
+            player1.sound_boost_loop.stop()
             player1.explode()
-
         if player2.health >= 1:
             if keys[pygame.K_a]:
                 player2.turn_left()
@@ -276,6 +370,7 @@ while running:
             else:
                 player2.img = pygame.image.load(f'Graphics/Player_2.png').convert_alpha()
         if player2.health <= 0:
+            player2.sound_boost_loop.stop()
             player2.explode()
 
 
@@ -284,8 +379,8 @@ while running:
         screen.fill('black')
 
         # Center gravity point
-        # pygame.draw.circle(screen, (255, 255, 255), (WIDTH // 2, HEIGHT // 2), 8)
-        # pygame.draw.circle(screen, (0, 0, 0), (WIDTH // 2, HEIGHT // 2), 7)
+        pygame.draw.circle(screen, (255, 255, 255), (WIDTH // 2, HEIGHT // 2), 8)
+        pygame.draw.circle(screen, (0, 0, 0), (WIDTH // 2, HEIGHT // 2), 7)
 
         # Stop drawing when explosion animation ends
         if player1.current_sprite < 9:
@@ -297,19 +392,25 @@ while running:
         draw_bullet(player1_bullet, player2)
         draw_bullet(player2_bullet, player1)
         draw_bullet(bullet_mouse, player1)
-        display_text('FPS', fps, 10)
-        display_text('velocity', player1.angle_velocity, 40)
-        display_text('bullets', len(player1_bullet.bullet_list + bullet_mouse.bullet_list), 70)
-        display_text('angle', player1.angle, 100)
-        display_text('p1_health', player1.health, 130)
-        display_text('p2_health', player2.health, 160)
-        display_text('time', player1_last_bullet_time, 190)
+        if debug:
+            debug_text('FPS', 10, 10, 24, fps)
+            debug_text('ticks', 40, 10, 24, start_ticks)
+            debug_text('p1_bullets', 70, 10, 24, len(player1_bullet.bullet_list + bullet_mouse.bullet_list))
+            debug_text('p1_angle', 100, 10, 24, player1.angle)
+            debug_text('p1_health', 130, 10, 24, player1.health)
+            debug_text('p2_health', 160, 10, 24, player2.health)
+            debug_text('p1_rotation', 190, 10, 24, player1.angle_velocity)
         bullet_collisions()
         mouse_bullet_spawn()
         pygame.display.update()
 
-    else:
-        screen.fill('black')
+    elif main_menu == True:
+        menu_screen()
+        pygame.display.update()
+
+    elif options_menu == True:
+        options_screen()
+        pygame.display.update()
 
     clock.tick(60)
 pygame.quit()
