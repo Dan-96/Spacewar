@@ -2,6 +2,9 @@ import pygame
 
 import math
 
+import random
+
+
 
 class Player:
     def __init__(self, x, y, angle, player):
@@ -28,6 +31,7 @@ class Player:
         self.gravity_point = pygame.math.Vector2(WIDTH // 2, HEIGHT // 2)
         self.gravitational_force = 0.02
         self.current_sprite = 0
+        self.bullet_count = 1
 
     def explode(self):
         self.angle = 0
@@ -58,7 +62,7 @@ class Player:
         self.angle_velocity *= 0.96
 
     def apply_thrust(self):
-        self.thrust_force = 0.005
+        self.thrust_force = 0.02
         self.velocity_x += self.cosine * self.thrust_force
         self.velocity_y -= self.sine * self.thrust_force
 
@@ -71,14 +75,10 @@ class Player:
     def update_location(self):
         self.x += self.velocity_x
         self.y += self.velocity_y
-        if self.x > WIDTH:
-            self.x = 0
-        elif self.x < 0 - self.w:
-            self.x = WIDTH
-        elif self.y < 0:
-            self.y = HEIGHT
-        elif self.y > HEIGHT:
-            self.y = 0
+        if self.x >= WIDTH or self.x <= 0 - self.w or self.y <= 0 or self.y >= HEIGHT:
+            self.health -= 100
+            pygame.time.set_timer(event_1, 3000, 1)
+            pygame.mixer.Channel(3).play(player1.sound_explode)
 
     def update(self):
         self.update_rotation()
@@ -88,7 +88,7 @@ class Player:
 
 
 
-class Bullet:
+class Bullet(Player):
     def __init__(self, x, y, angle, velocity, player=False):
         self.x = x
         self.y = y
@@ -103,27 +103,40 @@ class Bullet:
         self.sound = pygame.mixer.Sound('Sounds/Shooting.mp3')
         self.sound.set_volume(0.2)
         if velocity:
-            self.velocity_x = (math.cos(math.radians(angle + 90)) * 2) + player.velocity_x
-            self.velocity_y = (-math.sin(math.radians(angle + 90)) * 2) + player.velocity_y
-        else:
-            self.velocity_x = 0
-            self.velocity_y = 0
+            self.velocity_x = (math.cos(math.radians(angle + 90)) * 3) + player.velocity_x
+            self.velocity_y = (-math.sin(math.radians(angle + 90)) * 3) + player.velocity_y
         self.gravity_point = pygame.math.Vector2(WIDTH // 2, HEIGHT // 2)
         self.gravitational_force = 0
 
-    def update(self):
+
+    def update_bullet(self):
         self.x += self.velocity_x
         self.y += self.velocity_y
-        self.apply_vector()
+        self.apply_bullet_vector()
 
-    def apply_vector(self):
+    def check_bullet_collisions(self, player):
+        for i in self.bullet_list:
+            i.draw_bullet(screen)
+            i.update_bullet()
+            if i.x < 0 or i.x > WIDTH or i.y < 0 or i.y > HEIGHT:
+                self.bullet_list.remove(i)
+            if player.health >= 1:
+                if i.check_ship_collision(player.rotated_rect):
+                    self.bullet_list.remove(i)
+                    player.health -= 1
+                    if player.health <= 0:
+                        pygame.time.set_timer(event_1, 3000, 1)
+                        pygame.mixer.Channel(3).play(player1.sound_explode)
+                        player.explode()
+
+    def apply_bullet_vector(self):
         # Calculates bullet gravity towards the centre
         self.gravity_direction = self.gravity_point - pygame.math.Vector2(self.x, self.y)
         self.gravity_direction.normalize_ip()
         self.velocity_x += self.gravity_direction.x * self.gravitational_force
         self.velocity_y += self.gravity_direction.y * self.gravitational_force
 
-    def draw(self, window):
+    def draw_bullet(self, window):
         pygame.draw.circle(window, self.color, (int(self.x), int(self.y)), self.radius)
 
     def check_ship_collision(self, object):
@@ -139,7 +152,7 @@ class Bullet:
 def debug_text(name, x, y, size, variable=False):
     font = pygame.font.Font('Fonts/clacon2.ttf', size)
     if variable:
-        text = font.render(f"{name} {variable: .1f}", False, (255, 255, 255))
+        text = font.render(f"{name} {variable: .0f}", False, (255, 255, 255))
         screen.blit(text, (y, x))
     else:
         text = font.render(f'{name}', False, (255, 255, 255))
@@ -154,23 +167,7 @@ def mouse_bullet_spawn():
             bullet_mouse.bullet_list.append(Bullet(mouse_x, (mouse_y + 17), 0, False, player1))
 
 
-def draw_bullet(name, player):
-    for i in name.bullet_list:
-        i.draw(screen)
-        i.update()
-        if i.x < 0 or i.x > WIDTH or i.y < 0 or i.y > HEIGHT:
-            name.bullet_list.remove(i)
-        if player.health >= 1:
-            if i.check_ship_collision(player.rotated_rect):
-                name.bullet_list.remove(i)
-                player.health -= 1
-                if player.health <= 0:
-                    pygame.time.set_timer(event_1, 3000, 1)
-                    pygame.mixer.Channel(3).play(player1.sound_explode)
-                    player.explode()
-
-
-def bullet_collisions():
+def bullets_collide():
     # Checks for bullet to bullet collisions
     for i in player1_bullet.bullet_list:
         for j in player2_bullet.bullet_list:
@@ -178,6 +175,7 @@ def bullet_collisions():
                 if i.check_bullet_collision(j, 6):
                     player1_bullet.bullet_list.remove(i)
                     player2_bullet.bullet_list.remove(j)
+
 
 
 def restart_game():
@@ -190,6 +188,8 @@ def restart_game():
     player1.velocity_x, player2.velocity_x = 0, 0
     player1.velocity_y, player2.velocity_y = 0, 0
     player1.current_sprite, player2.current_sprite = 0, 0
+    player1.bullet_count, player2.bullet_count = 1, 1
+    player1.angle_velocity, player2.angle_velocity = 0, 0
     # Player 2 reset settings
     player2.angle = 270
     player2.x = 633
@@ -209,12 +209,22 @@ def display_text(text, x, y, colour='gray33', size=30):
     screen.blit(menu_text, menu_text_rect)
 
 
+def check_powerup(player):
+    global powerup_collected
+    if not powerup_collected:
+        pygame.draw.circle(screen, 'green', (powerup_x, powerup_y), 5)
+        distance = math.sqrt((player.x - powerup_x) ** 2 + (player.y - powerup_y) ** 2)
+        if distance < player.w / 2 + 8:
+            player.bullet_count += 1
+            powerup_collected = True
+            pygame.time.set_timer(event_2, 1000, 1)
+
 def menu_screen():
     screen.fill('black')
     logo = pygame.image.load('Graphics/logo.png').convert_alpha()
     resized_logo = pygame.transform.scale(logo, (742, 116))
     screen.blit(resized_logo, (579, 100))
-    display_text('alpha-v0.1.0', 1400, 210, 'grey', 20)
+    display_text('alpha-v0.1.1', 1400, 210, 'grey', 20)
     display_text('START', 950, 450)
     display_text('OPTIONS', 950, 500)
     display_text('EXIT', 950, 550)
@@ -243,10 +253,12 @@ pygame.init()
 WIDTH = 1900
 HEIGHT = 1000
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.transform.scale(screen, (800, 600))
 pygame.display.set_caption("Spacewar")
 icon = pygame.image.load('Graphics/Player_1_Thrust.png')
 pygame.display.set_icon(icon)
 mouse_x, mouse_y = pygame.mouse.get_pos()
+powerup_x, powerup_y = random.randint(10, 1890), random.randint(10, 990)
 player1 = Player(1266, 500, 90, 'Player_1')
 player2 = Player(633, 500, 270, 'Player_2')
 player1_bullet = Bullet(player1.x, player1.y, player1.angle, True, player1)
@@ -254,19 +266,24 @@ player2_bullet = Bullet(player2.x, player2.y, player2.angle, True, player2)
 bullet_mouse = Bullet(mouse_x, mouse_y, 0, False)
 player1_last_bullet_time = 0
 player2_last_bullet_time = 0
+player1_bullet_count = 1
+player2_bullet_count = 1
 bullet_cooldown = 3000
 clock = pygame.time.Clock()
 pygame.mixer.set_num_channels(4)
 menu_selection = 0
 options_selection = 0
-debug = False
+debug = True
 game_active = False
 main_menu = True
 options_menu = False
 running = True
+powerup_collected = False
+
 
 # Custom events
 event_1 = pygame.USEREVENT + 1
+event_2 = pygame.USEREVENT + 2
 
 while running:
     for event in pygame.event.get():
@@ -274,20 +291,26 @@ while running:
             running = False
         if event.type == event_1:
             restart_game()
+            powerup_x, powerup_y = random.randint(10, 1890), random.randint(10, 990)
+        if event.type == event_2:
+            powerup_x, powerup_y = random.randint(10, 1890), random.randint(10, 990)
+            powerup_collected = False
         if game_active:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RCTRL:
                     if start_ticks - player1_last_bullet_time > bullet_cooldown:
-                        if player1.health > 0:
+                        if player1.health > 0 and player1.bullet_count >= 1:
                             player1_bullet.bullet_list.append(Bullet(player1.x, player1.y, player1.angle, True, player1))
                             pygame.mixer.Channel(2).play(player1_bullet.sound)
                             player1_last_bullet_time = start_ticks
+                            player1.bullet_count -= 1
                 if event.key == pygame.K_SPACE:
                     if start_ticks - player2_last_bullet_time > bullet_cooldown:
-                        if player2.health > 0:
+                        if player2.health > 0 and player2.bullet_count >= 1:
                             player2_bullet.bullet_list.append(Bullet(player2.x, player2.y, player2.angle, True, player2))
                             pygame.mixer.Channel(2).play(player2_bullet.sound)
                             player2_last_bullet_time = start_ticks
+                            player2.bullet_count -= 1
                 if event.key == pygame.K_ESCAPE:
                     restart_game()
                     game_active = False
@@ -337,6 +360,7 @@ while running:
                         options_menu = False
                         main_menu = True
                 if event.key == pygame.K_ESCAPE:
+                    restart_game()
                     options_menu = False
                     main_menu = True
 
@@ -389,9 +413,12 @@ while running:
             player2.draw()
 
         fps = clock.get_fps()
-        draw_bullet(player1_bullet, player2)
-        draw_bullet(player2_bullet, player1)
-        draw_bullet(bullet_mouse, player1)
+        player1_bullet.check_bullet_collisions(player2)
+        player1_bullet.check_bullet_collisions(player1)
+        player2_bullet.check_bullet_collisions(player1)
+        player2_bullet.check_bullet_collisions(player2)
+        bullet_mouse.check_bullet_collisions(player1)
+
         if debug:
             debug_text('FPS', 10, 10, 24, fps)
             debug_text('ticks', 40, 10, 24, start_ticks)
@@ -399,14 +426,20 @@ while running:
             debug_text('p1_angle', 100, 10, 24, player1.angle)
             debug_text('p1_health', 130, 10, 24, player1.health)
             debug_text('p2_health', 160, 10, 24, player2.health)
-            debug_text('p1_rotation', 190, 10, 24, player1.angle_velocity)
-        bullet_collisions()
+            debug_text('p1_bullet_count', 190, 10, 24, player1.bullet_count)
+            debug_text('p2_bullet_count', 220, 10, 24, player2.bullet_count)
+            debug_text('p1_bullet_count', 250, 10, 24, player1_bullet.velocity_x)
+            debug_text('p2_bullet_count', 280, 10, 24, player1_bullet.velocity_y)
+        bullets_collide()
         mouse_bullet_spawn()
+        check_powerup(player1)
+        check_powerup(player2)
         pygame.display.update()
 
     elif main_menu == True:
         menu_screen()
         pygame.display.update()
+        powerup_x, powerup_y = random.randint(10, 1890), random.randint(10, 990)
 
     elif options_menu == True:
         options_screen()
