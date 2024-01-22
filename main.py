@@ -62,7 +62,7 @@ class Player:
         self.angle_velocity *= 0.96
 
     def apply_thrust(self):
-        self.thrust_force = 0.02
+        self.thrust_force = 0.02 # Default: 0.02
         self.velocity_x += self.cosine * self.thrust_force
         self.velocity_y -= self.sine * self.thrust_force
 
@@ -75,9 +75,9 @@ class Player:
     def update_location(self):
         self.x += self.velocity_x
         self.y += self.velocity_y
-        if self.x >= WIDTH or self.x <= 0 - self.w or self.y <= 0 or self.y >= HEIGHT:
-            self.health -= 100
-            pygame.time.set_timer(event_1, 3000, 1)
+        if self.x >= WIDTH or self.x <= 0 or self.y <= 0 or self.y >= HEIGHT:
+            self.health -= 1000
+            pygame.time.set_timer(restart_event, 3000, 1)
             pygame.mixer.Channel(3).play(player1.sound_explode)
 
     def update(self):
@@ -105,9 +105,11 @@ class Bullet(Player):
         if velocity:
             self.velocity_x = (math.cos(math.radians(angle + 90)) * 3) + player.velocity_x
             self.velocity_y = (-math.sin(math.radians(angle + 90)) * 3) + player.velocity_y
+        else:
+            self.velocity_x = 0
+            self.velocity_y = 0
         self.gravity_point = pygame.math.Vector2(WIDTH // 2, HEIGHT // 2)
-        self.gravitational_force = 0
-
+        self.gravitational_force = 0 # How much bullets are attracted towards centre of the screen
 
     def update_bullet(self):
         self.x += self.velocity_x
@@ -125,12 +127,12 @@ class Bullet(Player):
                     self.bullet_list.remove(i)
                     player.health -= 1
                     if player.health <= 0:
-                        pygame.time.set_timer(event_1, 3000, 1)
+                        pygame.time.set_timer(restart_event, 3000, 1)
                         pygame.mixer.Channel(3).play(player1.sound_explode)
                         player.explode()
 
     def apply_bullet_vector(self):
-        # Calculates bullet gravity towards the centre
+        # If enabled calculates bullet gravity towards the centre
         self.gravity_direction = self.gravity_point - pygame.math.Vector2(self.x, self.y)
         self.gravity_direction.normalize_ip()
         self.velocity_x += self.gravity_direction.x * self.gravitational_force
@@ -177,7 +179,6 @@ def bullets_collide():
                     player2_bullet.bullet_list.remove(j)
 
 
-
 def restart_game():
     # Player 1 reset settings
     player1.angle = 90
@@ -199,6 +200,10 @@ def restart_game():
     player1_bullet.bullet_list.clear()
     player2_bullet.bullet_list.clear()
     bullet_mouse.bullet_list.clear()
+    powerups['ammo']['collected'] = True
+    powerups['shield']['collected'] = True
+    pygame.time.set_timer(ammo_event, 3000, 1)
+    pygame.time.set_timer(shield_event, 15000, 1)
 
 
 def display_text(text, x, y, colour='gray33', size=30):
@@ -210,21 +215,31 @@ def display_text(text, x, y, colour='gray33', size=30):
 
 
 def check_powerup(player):
-    global powerup_collected
-    if not powerup_collected:
-        pygame.draw.circle(screen, 'green', (powerup_x, powerup_y), 5)
-        distance = math.sqrt((player.x - powerup_x) ** 2 + (player.y - powerup_y) ** 2)
-        if distance < player.w / 2 + 8:
-            player.bullet_count += 1
-            powerup_collected = True
-            pygame.time.set_timer(event_2, 1000, 1)
+    for powerup_name, powerup_data in powerups.items():
+        if not powerup_data["collected"]:
+            if powerup_name == 'ammo':
+                pygame.draw.circle(screen, powerup_data["color"], (ammo_x, ammo_y), 8)
+                distance = math.sqrt((player.x - ammo_x) ** 2 + (player.y - ammo_y) ** 2)
+                if distance < player.w / 2 + 8:
+                    player.bullet_count += 1
+                    powerup_data["collected"] = True
+                    pygame.time.set_timer(ammo_event, 3000, 1)
+            if powerup_name == 'shield':
+                pygame.draw.circle(screen, powerup_data["color"], (shield_x, shield_y), 8)
+                distance = math.sqrt((player.x - shield_x) ** 2 + (player.y - shield_y) ** 2)
+                if distance < player.w / 2 + 8:
+                    player.health += 1
+                    powerup_data["collected"] = True
+                    pygame.time.set_timer(shield_event, 15000, 1)
+                    pygame.time.set_timer(shield_end_event, 10000, 1)
+
 
 def menu_screen():
     screen.fill('black')
     logo = pygame.image.load('Graphics/logo.png').convert_alpha()
     resized_logo = pygame.transform.scale(logo, (742, 116))
     screen.blit(resized_logo, (579, 100))
-    display_text('alpha-v0.1.1', 1400, 210, 'grey', 20)
+    display_text('alpha-v0.1.2', 1400, 210, 'grey', 20)
     display_text('START', 950, 450)
     display_text('OPTIONS', 950, 500)
     display_text('EXIT', 950, 550)
@@ -258,7 +273,9 @@ pygame.display.set_caption("Spacewar")
 icon = pygame.image.load('Graphics/Player_1_Thrust.png')
 pygame.display.set_icon(icon)
 mouse_x, mouse_y = pygame.mouse.get_pos()
-powerup_x, powerup_y = random.randint(10, 1890), random.randint(10, 990)
+ammo_x, ammo_y = random.randint(10, 1890), random.randint(10, 990)
+shield_x, shield_y = random.randint(10, 1890), random.randint(10, 990)
+triple_x, triple_y = random.randint(10, 1890), random.randint(10, 990)
 player1 = Player(1266, 500, 90, 'Player_1')
 player2 = Player(633, 500, 270, 'Player_2')
 player1_bullet = Bullet(player1.x, player1.y, player1.angle, True, player1)
@@ -273,28 +290,40 @@ clock = pygame.time.Clock()
 pygame.mixer.set_num_channels(4)
 menu_selection = 0
 options_selection = 0
+powerups = {
+    "ammo": {"collected": True, "color": 'goldenrod3'},
+    "shield": {"collected": True, "color": 'dodgerblue3'},
+}
 debug = True
 game_active = False
 main_menu = True
 options_menu = False
 running = True
-powerup_collected = False
-
 
 # Custom events
-event_1 = pygame.USEREVENT + 1
-event_2 = pygame.USEREVENT + 2
+restart_event = pygame.USEREVENT + 1
+ammo_event = pygame.USEREVENT + 2
+shield_event = pygame.USEREVENT + 3
+shield_end_event = pygame.USEREVENT + 5
 
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        if event.type == event_1:
+        if event.type == restart_event:
             restart_game()
-            powerup_x, powerup_y = random.randint(10, 1890), random.randint(10, 990)
-        if event.type == event_2:
-            powerup_x, powerup_y = random.randint(10, 1890), random.randint(10, 990)
-            powerup_collected = False
+        if event.type == ammo_event:
+            ammo_x, ammo_y = random.randint(10, 1890), random.randint(10, 990)
+            powerups['ammo']['collected'] = False
+        if event.type == shield_event:
+            shield_x, shield_y = random.randint(10, 1890), random.randint(10, 990)
+            powerups['shield']['collected'] = False
+        if event.type == shield_end_event:
+            if player1.health >= 2:
+                player1.health = 1
+            if player2.health >= 2:
+                player2.health = 1
+
         if game_active:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RCTRL:
@@ -324,7 +353,10 @@ while running:
                     if player2.health > 0:
                         player2.sound_boost_loop.stop()
                         pygame.mixer.Channel(1).play(player2.sound_boost_end)
+
         elif main_menu:
+            powerups['ammo']['collected'] = True
+            powerups['shield']['collected'] = True
             options_selection = 0
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
@@ -339,11 +371,14 @@ while running:
                     if menu_selection == 0:
                         main_menu = False
                         game_active = True
+                        pygame.time.set_timer(ammo_event, 3000, 1)
+                        pygame.time.set_timer(shield_event, 15000, 1)
                     if menu_selection == 1:
                         main_menu = False
                         options_menu = True
                     if menu_selection == 2:
                         running = False
+
         elif options_menu:
             menu_selection = 0
             if event.type == pygame.KEYDOWN:
@@ -397,12 +432,11 @@ while running:
             player2.sound_boost_loop.stop()
             player2.explode()
 
-
         player1.update()
         player2.update()
         screen.fill('black')
 
-        # Center gravity point
+        # Centre gravity point
         pygame.draw.circle(screen, (255, 255, 255), (WIDTH // 2, HEIGHT // 2), 8)
         pygame.draw.circle(screen, (0, 0, 0), (WIDTH // 2, HEIGHT // 2), 7)
 
@@ -412,12 +446,18 @@ while running:
         if player2.current_sprite < 9:
             player2.draw()
 
+        if player1.health >= 2:
+            pygame.draw.arc(screen, 'skyblue', ((player1.x - 15), (player1.y - 15), 30, 30), 0, 360, 1)
+        if player2.health >= 2:
+            pygame.draw.arc(screen, 'skyblue', ((player2.x - 15), (player2.y - 15), 30, 30), 0, 360, 1)
+
         fps = clock.get_fps()
         player1_bullet.check_bullet_collisions(player2)
         player1_bullet.check_bullet_collisions(player1)
         player2_bullet.check_bullet_collisions(player1)
         player2_bullet.check_bullet_collisions(player2)
         bullet_mouse.check_bullet_collisions(player1)
+        bullet_mouse.check_bullet_collisions(player2)
 
         if debug:
             debug_text('FPS', 10, 10, 24, fps)
@@ -428,18 +468,16 @@ while running:
             debug_text('p2_health', 160, 10, 24, player2.health)
             debug_text('p1_bullet_count', 190, 10, 24, player1.bullet_count)
             debug_text('p2_bullet_count', 220, 10, 24, player2.bullet_count)
-            debug_text('p1_bullet_count', 250, 10, 24, player1_bullet.velocity_x)
-            debug_text('p2_bullet_count', 280, 10, 24, player1_bullet.velocity_y)
+
         bullets_collide()
         mouse_bullet_spawn()
-        check_powerup(player1)
-        check_powerup(player2)
+        p1_shield_check = check_powerup(player1)
+        p2_shield_check = check_powerup(player2)
         pygame.display.update()
 
     elif main_menu == True:
         menu_screen()
         pygame.display.update()
-        powerup_x, powerup_y = random.randint(10, 1890), random.randint(10, 990)
 
     elif options_menu == True:
         options_screen()
