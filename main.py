@@ -125,6 +125,9 @@ class Bullet(Player):
         for i in self.bullet_list:
             i.draw_bullet(screen)
             i.update_bullet()
+            distance = math.sqrt((i.x - black_hole_pos[0]) ** 2 + (i.y - black_hole_pos[1]) ** 2)
+            if distance < i.radius * 5 + black_hole_radius:
+                self.bullet_list.remove(i)
             if i.x < 0 or i.x > width or i.y < 0 or i.y > height:
                 self.bullet_list.remove(i)
             if player.health >= 1:
@@ -215,8 +218,9 @@ def restart_game():
 
 
 def black_hole(player):
-    pygame.draw.circle(screen, 'white', (width // 2, height // 2), 62)
-    black_hole = pygame.draw.circle(screen, 'black', (width // 2, height // 2), 60)
+    global black_hole_pos
+    global black_hole_radius
+    black_hole = pygame.draw.circle(screen, 'black', (width // 2, height // 2), (width / 34.78))
     black_hole_pos = black_hole.center
     black_hole_radius = black_hole.width // 2
     if player.health >= 1:
@@ -276,7 +280,7 @@ def menu_screen():
     logo = pygame.image.load('Graphics/logo.png').convert_alpha()
     resized_logo = pygame.transform.scale(logo, ((width // 2.56), (height // 8.62)))
     screen.blit(resized_logo, ((width // 3.28), (height // 10)))
-    display_text('alpha-v0.1.3', (width // 1.36), (height // 4.76), 'grey', (width // 95))
+    display_text('alpha-v0.1.4', (width // 1.36), (height // 4.76), 'grey', (width // 95))
     display_text('START', w_half, h_half - 50)
     display_text('OPTIONS', w_half, h_half)
     display_text('EXIT', w_half, h_half + 50)
@@ -319,13 +323,18 @@ def resolution_screen():
 
 
 pygame.init()
+pygame.mixer.init()
 width, height = resolution_changer()[:2]
 w_half = (width // 2)
 h_half = (height // 2)
+pygame.mixer.music.load('Sounds/Theme.mp3')
+pygame.mixer.music.set_volume(0.2)
+pygame.mixer.music.play(-1)
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Spacewar")
 icon = pygame.image.load('Graphics/Player_1_Thrust.png')
-# background = pygame.image.load('Graphics/Background.png').convert_alpha()
+background = pygame.image.load('Graphics/Background.png').convert_alpha()
+background_resized = pygame.transform.scale(background, (width, height), screen).convert_alpha()
 pygame.display.set_icon(icon)
 mouse_x, mouse_y = pygame.mouse.get_pos()
 ammo_x, ammo_y = random.randint(20, (width - 20)), random.randint(20, (height - 20))
@@ -348,7 +357,7 @@ powerups = {
     "ammo": {"collected": True, "color": 'goldenrod3'},
     "shield": {"collected": True, "color": 'dodgerblue3'},
 }
-debug = False
+debug = True
 game_active = False
 main_menu = True
 options_menu = False
@@ -487,6 +496,7 @@ while running:
                     menu_selection = 0
 
     if game_active:
+        pygame.mixer.music.pause()
         start_ticks = pygame.time.get_ticks()
         keys = pygame.key.get_pressed()
         if player1.health >= 1:
@@ -521,7 +531,8 @@ while running:
 
         player1.update()
         player2.update()
-        screen.fill('black')
+        # screen.fill('black')
+        screen.blit(background_resized, (0, 0))
         black_hole(player1)
         black_hole(player2)
         # Stop drawing when explosion animation ends
@@ -562,23 +573,33 @@ while running:
         p2_shield_check = check_powerup(player2)
         pygame.display.update()
 
-    elif main_menu == True:
-        menu_screen()
-        pygame.display.update()
-
-    elif options_menu == True:
-        options_screen()
-        pygame.display.update()
-
-    elif options_res_menu == True:
-        resolution_screen()
-        pygame.display.update()
+    else:
+        pygame.mixer.music.unpause()
+        if main_menu == True:
+            menu_screen()
+            pygame.display.update()
+        if options_menu == True:
+            options_screen()
+            pygame.display.update()
+        if options_res_menu == True:
+            resolution_screen()
+            pygame.display.update()
 
     clock.tick(60)
 pygame.quit()
 
+# -Added a new background
+# -Added bullet to black hole collision detection
+# -Added music to the main menu
+# -Changed ship models
+
 # To do:
 # -Add a new powerup
+# -Change explosion sprite to pixel art
+# -Limit thruster (TBD)
+
+# To fix:
+# -a bug where powerups can spawn inside the black hole
 
 
 
