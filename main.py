@@ -125,8 +125,8 @@ class Bullet(Player):
         for i in self.bullet_list:
             i.draw_bullet(screen)
             i.update_bullet()
-            distance = math.sqrt((i.x - black_hole_pos[0]) ** 2 + (i.y - black_hole_pos[1]) ** 2)
-            if distance < i.radius * 5 + black_hole_radius:
+            distance = math.sqrt((i.x - moon_pos[0]) ** 2 + (i.y - moon_pos[1]) ** 2)
+            if distance < i.radius * 5 + moon_radius:
                 self.bullet_list.remove(i)
             if i.x < 0 or i.x > width or i.y < 0 or i.y > height:
                 self.bullet_list.remove(i)
@@ -217,15 +217,16 @@ def restart_game():
     pygame.time.set_timer(shield_event, 15000, 1)
 
 
-def black_hole(player):
-    global black_hole_pos
-    global black_hole_radius
-    black_hole = pygame.draw.circle(screen, 'black', (width // 2, height // 2), (width / 34.78))
-    black_hole_pos = black_hole.center
-    black_hole_radius = black_hole.width // 2
+def draw_moon(player):
+    global moon_pos
+    global moon_radius
+    moon_surf = pygame.Surface((width, height), pygame.SRCALPHA)
+    moon = pygame.draw.circle(moon_surf, (0, 0, 0, 0), (width // 2, height // 2), (width / 34.78))
+    moon_pos = moon.center
+    moon_radius = moon.width // 2
     if player.health >= 1:
-        distance = math.sqrt((player.x - black_hole_pos[0]) ** 2 + (player.y - black_hole_pos[1]) ** 2)
-        if distance < player.h / 2 + black_hole_radius:
+        distance = math.sqrt((player.x - moon_pos[0]) ** 2 + (player.y - moon_pos[1]) ** 2)
+        if distance < player.h / 2 + moon_radius:
             player.health -= 1
             pygame.time.set_timer(restart_event, 3000, 1)
             pygame.mixer.Channel(3).play(player1.sound_explode)
@@ -279,8 +280,8 @@ def menu_screen():
     screen.fill('black')
     logo = pygame.image.load('Graphics/logo.png').convert_alpha()
     resized_logo = pygame.transform.scale(logo, ((width // 2.56), (height // 8.62)))
-    screen.blit(resized_logo, ((width // 3.28), (height // 10)))
-    display_text('alpha-v0.1.4', (width // 1.36), (height // 4.76), 'grey', (width // 95))
+    screen.blit(resized_logo, ((width // 3.29), (height // 10)))
+    display_text('alpha-v0.1.5', (width // 1.36), (height // 4.76), 'grey', (width // 95))
     display_text('START', w_half, h_half - 50)
     display_text('OPTIONS', w_half, h_half)
     display_text('EXIT', w_half, h_half + 50)
@@ -357,7 +358,7 @@ powerups = {
     "ammo": {"collected": True, "color": 'goldenrod3'},
     "shield": {"collected": True, "color": 'dodgerblue3'},
 }
-debug = True
+debug = False
 game_active = False
 main_menu = True
 options_menu = False
@@ -532,9 +533,9 @@ while running:
         player1.update()
         player2.update()
         # screen.fill('black')
-        screen.blit(background_resized, (0, 0))
-        black_hole(player1)
-        black_hole(player2)
+        screen.blit(background_resized, (-2, 0))
+        draw_moon(player1)
+        draw_moon(player2)
         # Stop drawing when explosion animation ends
         if player1.current_sprite < 9:
             player1.draw()
@@ -588,14 +589,15 @@ while running:
     clock.tick(60)
 pygame.quit()
 
-# -Added a new background
-# -Added bullet to black hole collision detection
-# -Added music to the main menu
-# -Changed ship models
+# Done:
+# -Changed the background from black hole to moon
+# -Changed explosion sprites resolutions
+# -Changed ship sprites resolutions
 
 # To do:
+# -Add credits somewhere
+# -Hot potato mode
 # -Add a new powerup
-# -Change explosion sprite to pixel art
 # -Limit thruster (TBD)
 
 # To fix:
