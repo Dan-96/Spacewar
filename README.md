@@ -20,7 +20,8 @@ Player 1: Up, Left, Right + R_CTRL
 
 Player 2: W, A, D + SPACE
 
-![image](https://github.com/Dan-96/Spacewar/assets/88732572/29592d49-da2f-4786-86f7-9b3dff12f35e)
+![spacewar](https://github.com/Dan-96/Spacewar/assets/88732572/53285f5f-2cd5-47aa-9894-e4c92e41e4fe)
+
 
 
 
