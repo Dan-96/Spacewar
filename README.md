@@ -16,9 +16,9 @@ e.g. main menu, different weapons, health system, etc.
 
 Controls:
 
-Player 1: Up, Left, Right + R_CTRL
+Player 1: Up, Left, Right, R_CTRL
 
-Player 2: W, A, D + SPACE
+Player 2: W, A, D, SPACE
 
 ![spacewar](https://github.com/Dan-96/Spacewar/assets/88732572/53285f5f-2cd5-47aa-9894-e4c92e41e4fe)
 
