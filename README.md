@@ -1,5 +1,6 @@
 
-![image](https://github.com/Dan-96/Spacewar/assets/88732572/2a77fcc5-94cc-4070-b575-fc9056fe4500)
+![image](https://github.com/Dan-96/Spacewar/assets/88732572/e5c5d13d-5b75-4f21-a1f6-40c91b571f76)
+
 
 			
 Pygame project heavily inspired by the game "Spacewar!" from 1962.
